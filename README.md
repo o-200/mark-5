@@ -13,7 +13,7 @@ When running an active product or service, users frequently reach out for suppor
 
 Mark-5 was created to solve this problem.
 
-With Mark-5, team members can interact with backend logs directly from their mobile phones through Discord slash commands:
+With Mark-5, team members can interact with backend logs directly from mobile phones, without permanent loggining into internal systems through Discord slash commands:
 
 - When a user asks for assistance, you can type `/logs user-activity user_id:<uuid>` or `/logs user-activity email:<email>` directly in Discord.
 - The bot queries your backend API, verifies administrative authorization, and streams the relevant plain-text log records straight into the channel or support thread as a downloadable file attachment.
