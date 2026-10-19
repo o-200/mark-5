@@ -9,7 +9,7 @@
     "start:dev": "tsx watch src/index.ts",
     "build": "tsc",
     "start": "tsx src/index.ts",
-    "test": "node --import tsx --test 'tests/**/*.test.ts'",
+    "test": "tsx scripts/run-tests.ts",
     "deploy:commands": "tsx scripts/deploy-commands.ts",
     "typecheck": "tsc --noEmit"
   },
