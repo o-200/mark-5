@@ -1,0 +1,30 @@
+{
+  "name": "mark-5",
+  "version": "1.0.0",
+  "description": "Enterprise-grade DDD Discord Bot skeleton with TypeScript, discord.js v14, native fetch, Zod, and Pino",
+  "type": "module",
+  "main": "dist/src/index.js",
+  "scripts": {
+    "start:dev": "tsx watch src/index.ts",
+    "build": "tsc",
+    "start": "tsx src/index.ts",
+    "test": "node --import tsx --test 'tests/**/*.test.ts'",
+    "deploy:commands": "tsx scripts/deploy-commands.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "discord.js": "^14.16.3",
+    "dotenv": "^16.4.5",
+    "pino": "^9.5.0",
+    "pino-pretty": "^11.3.0",
+    "tsx": "^4.19.1",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/node": "^22.7.5",
+    "typescript": "^5.6.3"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}
