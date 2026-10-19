@@ -1,5 +1,7 @@
 # Mark-5
 
+[![CI](https://github.com/o-200/mark-5/actions/workflows/ci.yml/badge.svg)](https://github.com/o-200/mark-5/actions/workflows/ci.yml)
+
 > A structured, production-ready Discord bot skeleton built with TypeScript, discord.js v14, Zod, and Domain-Driven Design (DDD).
 
 ---
