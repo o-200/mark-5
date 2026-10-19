@@ -1,123 +1,162 @@
-# Mark-5: DDD Discord Bot Skeleton
+# Mark-5
 
-An enterprise-grade, strictly-typed Discord bot skeleton built with **Node.js (LTS)**, **TypeScript**, **discord.js v14+**, **Zod**, native **fetch**, and **Pino**.
-
-The project is structured according to **Domain-Driven Design (DDD)** and **Hexagonal (Ports and Adapters)** architecture principles, positioning the bot as a robust, resilient intermediary layer between Discord API interactions and backend REST/HTTP endpoints.
+> A structured, production-ready Discord bot skeleton built with TypeScript, discord.js v14, Zod, and Domain-Driven Design (DDD).
 
 ---
 
-### Layer Breakdown
+## Motivation
 
-1. **`src/domain` (Core Business Logic)**
-   - Pure TypeScript, zero external framework dependencies.
-   - **Entities**: Business objects with lifecycle and identity (`UserProfile`).
-   - **Value Objects**: Validated, immutable attributes (`DiscordId` snowflake validation, `Email`).
-   - **Ports**: Interface contracts for external systems (`IBackendUserGateway`).
-   - **Errors**: Domain-specific error types (`InvalidBioError`).
+When running an active product or service, users frequently reach out for support directly inside Discord. When someone reports an urgent issue—such as a failed transaction, an account issue, or an error in a workflow—traditional debugging workflows create friction:
 
-2. **`src/application` (Use Cases & Orchestration)**
-   - Implements application workflows (`GetUserProfileUseCase`, `UpdateUserProfileUseCase`).
-   - Validates input boundaries with Zod schemas (`GetUserProfileInputSchema`, `UpdateUserProfileInputSchema`).
-   - Maps domain entities to/from DTOs (`UserProfileDTO`).
+- You have to open a laptop, connect to a corporate VPN or bastion host, log into a cloud console, or search through heavy monitoring dashboards.
+- By the time you find the relevant logs, valuable triage time has passed, especially if you are away from your desk.
 
-3. **`src/infrastructure` (Adapters & External Systems)**
-   - **`http/`**: Type-safe HTTP Client wrapping native `fetch` with AbortController timeouts, automatic Bearer authentication, and Zod response validation.
-   - **`backend/`**: Gateway implementations querying external microservices, with an in-memory mock fallback for offline development.
-   - **`config/`**: Environment variable parsing and validation with `dotenv` and `zod` (`getEnv()`).
-   - **`logging/`**: High-performance structured logging via `pino` with pretty formatting in dev and JSON in production.
-   - **`discord/`**: Discord client instantiation, event registration, and graceful shutdown listeners.
+Mark-5 was created to solve this problem.
 
-4. **`src/presentation` (Discord Interface)**
-   - **`pipeline/`**: Central `InteractionPipeline` handling timing, scoped logging, error interception, and ephemeral user feedback.
-   - **`commands/`**: Slash command definitions and execution (`/ping`, `/logs`).
-   - **`components/`**: Interactive button handlers and modal submission handlers.
-   - **`events/`**: Discord gateway event wiring (`ready`, `interactionCreate`).
+With Mark-5, team members can interact with backend logs directly from their mobile phones through Discord slash commands:
 
-5. **`src/shared` (Cross-Cutting Primitives)**
-   - `Result<T, E>` pattern for explicit, monadic error handling without unexpected exceptions.
-   - Base `Entity<T>` and `ValueObject<T>` classes.
-   - Base `AppError` hierarchy.
+- When a user asks for assistance, you can type `/logs user-activity user_id:<uuid>` or `/logs user-activity email:<email>` directly in Discord.
+- The bot queries your backend API, verifies administrative authorization, and streams the relevant plain-text log records straight into the channel or support thread as a downloadable file attachment.
+- You can inspect recent events on the spot from your phone and respond to the user immediately.
+
+Because administrative commands expose sensitive logs, Mark-5 is built with robust security controls: strict Discord user ID authorization gates, HMAC-SHA256 request signatures, input boundaries validated with Zod, and a decoupled architecture that ensures your bot remains reliable and testable as your backend grows.
 
 ---
 
-## 🚀 Getting Started
+## Features
+
+- Mobile Support Triage: Query and download plain-text activity logs (`user-activity`, `loader`, `product`) directly inside Discord from mobile or desktop.
+- Plug-and-Play Backend Gateway: Connect to your real REST/HTTP backend or enable `USE_MOCK_BACKEND=true` to use in-memory synthetic data for offline local development without spinning up external microservices.
+- Strict End-to-End Type Safety: Built with TypeScript 5 and Zod. Environment variables, API responses, and user inputs are strictly validated.
+- Enterprise Security: Slash commands enforce native Discord administrator permissions and explicit user ID whitelist verification (`DISCORD_ADMIN_IDS`). Outgoing requests to backend endpoints include HMAC-SHA256 signatures with timestamp validation.
+- Predictable Error Handling: Implements the `Result<T, E>` pattern to replace unexpected exceptions with explicit, typed error states.
+- Structured Logging: Uses Pino for structured logging—clean, readable colorized logs in development and structured JSON in production.
+- Zero-Dependency Testing: Includes 50+ unit and integration tests executing on Node's native test runner (`node --test`).
+- Production-Ready Docker Image: Multi-stage build on lightweight Alpine Linux running as a non-root user with `tini` for graceful signal forwarding (`SIGINT`/`SIGTERM`).
+
+---
+
+## Quickstart
 
 ### 1. Prerequisites
+
 - Node.js `>= 20.0.0` (LTS recommended)
 - npm `>= 10.0.0`
+- A Discord Bot application configured in the [Discord Developer Portal](https://discord.com/developers/applications)
 
-### 2. Installation
+### 2. Clone and Install
+
 ```bash
-git clone <repository_url>
+git clone https://github.com/your-username/mark-5.git
 cd mark-5
 npm install
 ```
 
-### 3. Environment Configuration
-Copy the template environment file:
+### 3. Configure Environment Variables
+
+Create your `.env` file from the provided template:
+
 ```bash
 cp .env.example .env
 ```
 
-Configure the following variables in `.env`:
+Configure your environment settings in `.env`:
+
 ```env
 # Runtime
 NODE_ENV=development
 LOG_LEVEL=debug
 
-# Discord Application Credentials (from Discord Developer Portal)
+# Discord Bot Credentials
 DISCORD_TOKEN=your_bot_token_here
-DISCORD_CLIENT_ID=your_client_id_here
+DISCORD_CLIENT_ID=your_application_client_id_here
+DISCORD_GUILD_ID=your_test_server_id_here
+DISCORD_ADMIN_IDS=your_discord_user_id_here
 
-# Optional: Development Guild ID for instantaneous slash command sync
-DISCORD_GUILD_ID=your_dev_guild_id_here
-
-# External Backend Service
-BACKEND_API_URL=https://api.example.com
-BACKEND_API_KEY=your_backend_secret_key
+# Backend Service API
+BACKEND_API_URL=http://localhost:3000
+LOGS_EXPORT_SECRET_KEY=any_random_string_or_shared_secret
 BACKEND_TIMEOUT_MS=5000
 
-# Set to 'true' to use in-memory mock data (no backend needed for local dev)
+# Set to true to run offline with mock data (no real backend needed for local dev)
 USE_MOCK_BACKEND=true
 ```
 
+> Note on `DISCORD_GUILD_ID`:
+> Providing a Guild ID deploys slash commands immediately to that specific server. If left blank, commands are registered globally, which can take Discord up to an hour to propagate.
+
 ### 4. Deploy Slash Commands
-To register Slash Commands with the Discord REST API:
+
+Register the slash commands with the Discord REST API:
+
 ```bash
 npm run deploy:commands
 ```
-*(If `DISCORD_GUILD_ID` is set, commands sync immediately to that server. Otherwise, they are registered globally).*
 
-### 5. Start Development
-Run with live reload via `tsx`:
+### 5. Start the Bot
+
+Start the bot in development mode with live watch and reload:
+
 ```bash
 npm run dev
 ```
 
 ---
 
-## 🛠 Available Scripts
+## Included Commands
+
+Mark-5 includes two administrative slash commands:
+
+| Command | Subcommands & Options | Description |
+|---|---|---|
+| `/ping` | None | Verifies bot responsiveness, WebSocket heartbeat, uptime, and runtime version. |
+| `/logs` | `user-activity`<br>`loader`<br>`product` | Fetches activity logs from the backend. Restricts execution to authorized admin IDs (`DISCORD_ADMIN_IDS`), filters records by `user_id`, `email`, or `limit`, and delivers results as a `.txt` file attachment. |
+
+---
+
+## Architecture Overview
+
+Mark-5 is structured around Domain-Driven Design (DDD) and Hexagonal Architecture (Ports and Adapters) to keep Discord presentation logic completely isolated from business rules and external backend APIs.
+
+```text
+src/
+├── domain/             # Core business entities, value objects, and gateway port interfaces
+├── application/        # Use cases and input/output DTOs with Zod validation
+├── presentation/       # Discord slash commands, event pipeline, and error handling
+├── infrastructure/     # HTTP client, backend gateways, Discord client, config, and logging
+├── shared/             # Result pattern and base primitive classes
+└── index.ts            # Application bootstrap and dependency wiring
+```
+
+For a comprehensive guide detailing layer interactions, request lifecycles, and how to add new features, see [ARCHITECTURE.md](ARCHITECTURE.md).
+
+---
+
+## Available Scripts
 
 | Command | Description |
 |---|---|
 | `npm run dev` | Starts the bot in development mode with live watch/reload via `tsx`. |
-| `npm run typecheck` | Runs TypeScript compiler (`tsc --noEmit`) to verify strict typing. |
-| `npm test` | Runs the test suite via Node's native test runner with `tsx`. |
-| `npm run build` | Compiles TypeScript source files to JavaScript in `dist/`. |
-| `npm start` | Starts the bot in production mode via `tsx src/index.ts`. |
-| `npm run deploy:commands` | Registers application slash commands to Discord API. |
+| `npm run deploy:commands` | Deploys slash commands to Discord API. |
+| `npm test` | Runs the full test suite using Node's native test runner (`node --test`). |
+| `npm run typecheck` | Runs the TypeScript compiler (`tsc --noEmit`) to verify strict typing. |
+| `npm run build` | Compiles TypeScript source files into JavaScript in `dist/`. |
+| `npm start` | Runs the compiled bot in production mode. |
 
 ---
 
-## 🐳 Docker Deployment
+## Docker Deployment
 
-### Building the Image
+### Build the Image
+
 ```bash
 docker build -t mark-5 .
 ```
 
-### Running with Docker
-Pass your environment configuration via `.env` file:
+### Run the Container
+
+Pass the configuration via your `.env` file:
+
 ```bash
 docker run -d \
   --name mark-5-bot \
@@ -126,9 +165,32 @@ docker run -d \
   mark-5
 ```
 
-Features included in the Docker build:
-- **Node.js 22 LTS (Alpine)** lightweight base image.
-- **Tini init process** (`/sbin/tini`) for correct PID 1 process management and forwarding `SIGINT` / `SIGTERM` signals for graceful Discord bot shutdown.
-- **Non-root user (`node`)** for enhanced container security.
-- **Production dependencies only** (`npm ci --omit=dev`).
-# mark-5
+### View Container Logs
+
+```bash
+docker logs -f mark-5-bot
+```
+
+---
+
+## Testing
+
+The test suite covers domain invariants, value objects, use case input validation, HMAC signature computation, and Discord command authorization gates.
+
+Run all tests:
+
+```bash
+npm test
+```
+
+Run a specific test file:
+
+```bash
+node --import tsx --test tests/domain/user.test.ts
+```
+
+---
+
+## License
+
+This project is licensed under the [MIT License](LICENSE).
